@@ -40,10 +40,10 @@ same HTTP server:
 - `stream/` — HTTP handlers that serve media bytes (video AND audio;
   `http.ServeFile` handles range requests for any file type, so no
   separate code path is needed for audio).
-  - `local.go` — serves local files with range-request support
-    (implemented ✅ for video; works for audio `.mp3`/`.flac`/etc. as-is,
-    though the handler/type names are still video-specific and slated
-    for a media-neutral rename in Phase 2 — see `PLAN.md`)
+  - `local_media.go` — `LocalMediaHandler` serves local files with
+    range-request support (implemented ✅; media-neutral naming as of
+    2026-07-06 — works identically for video `.mp4` and audio
+    `.mp3`/`.flac`/etc., same handler/code path for both)
   - `drive_proxy.go` — will proxy Google Drive files (video or audio),
     single Drive consumer regardless of client count (not yet built)
 - `sync/` — will hold the WebSocket broadcast hub (not yet built)

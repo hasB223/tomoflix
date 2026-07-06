@@ -1,0 +1,29 @@
+### TomoFlix server — manual request collection.
+### Run the server first: `docker compose up --build` (or `go run .` in
+### server/), then fire these with an HTTP client that understands the
+### `###`-delimited .http format (VS Code REST Client, JetBrains HTTP Client).
+
+@baseUrl = http://localhost:8080
+
+### Health check — happy path
+# Expect: 200 OK, body "ok"
+GET {{baseUrl}}/health
+
+### Local media — happy path (full file)
+# Expect: 200 OK, Content-Type based on file extension (video or audio),
+# full file body. Replace sample.mp4 with a real file in TOMOFLIX_MEDIA_DIR.
+GET {{baseUrl}}/stream/local/sample.mp4
+
+### Local media — happy path (range request, e.g. seeking)
+# Expect: 206 Partial Content, Content-Range header, only the requested
+# byte range in the body.
+GET {{baseUrl}}/stream/local/sample.mp4
+Range: bytes=0-1023
+
+### Local media — error case: file does not exist
+# Expect: 404 Not Found
+GET {{baseUrl}}/stream/local/does-not-exist.mp4
+
+### Local media — error case: no filename given
+# Expect: 400 Bad Request, body "no file specified"
+GET {{baseUrl}}/stream/local/

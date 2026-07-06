@@ -19,10 +19,10 @@ docker compose up --build
 ```
 
 This builds `server/` (Go, multi-stage Dockerfile) and serves it on
-`http://localhost:8080`. Drop `.mp4` files into a `./videos` directory at the
-repo root — it's bind-mounted into the container and served at
-`/stream/local/<filename>`. Check `http://localhost:8080/health` to confirm
-it's up.
+`http://localhost:8080`. Drop media files (video or audio — `.mp4`, `.mp3`,
+etc.) into a `./videos` directory at the repo root — it's bind-mounted into
+the container and served at `/stream/local/<filename>`. Check
+`http://localhost:8080/health` to confirm it's up.
 
 There's no frontend yet (`client/` is still a placeholder), so there's
 nothing to watch through a browser UI just yet.

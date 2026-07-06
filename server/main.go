@@ -1,6 +1,6 @@
 // TomoFlix server entrypoint.
 //
-// For now this just wires up the local video streaming route. As we build
+// For now this just wires up the local media streaming route. As we build
 // more pieces (WebSocket sync hub, Google Drive proxy, SQLite storage)
 // they'll get added here too.
 package main
@@ -14,20 +14,21 @@ import (
 )
 
 func main() {
-	// Where our local .mp4 files live. In a real deployment you'd load this
-	// from a config file or environment variable - using an env var with a
-	// sensible default for now, so it's easy to override without editing code.
-	videoDir := os.Getenv("TOMOFLIX_VIDEO_DIR")
-	if videoDir == "" {
-		videoDir = "./videos"
+	// Where our local media files (video or audio) live. In a real
+	// deployment you'd load this from a config file or environment
+	// variable - using an env var with a sensible default for now, so
+	// it's easy to override without editing code.
+	mediaDir := os.Getenv("TOMOFLIX_MEDIA_DIR")
+	if mediaDir == "" {
+		mediaDir = "./videos"
 	}
 
-	localVideoHandler := stream.NewLocalVideoHandler(videoDir)
+	localMediaHandler := stream.NewLocalMediaHandler(mediaDir)
 
 	// http.NewServeMux is Go's built-in router. It's basic (no wildcard
 	// params like Express has), but it's enough for what we need right now.
 	mux := http.NewServeMux()
-	mux.Handle("/stream/local/", localVideoHandler)
+	mux.Handle("/stream/local/", localMediaHandler)
 
 	// Simple health check - useful later when this runs as a systemd
 	// service or behind Cloudflare Tunnel, so we can confirm it's alive.
@@ -41,7 +42,7 @@ func main() {
 		port = "8080"
 	}
 
-	log.Printf("TomoFlix server starting on :%s (serving videos from %s)", port, videoDir)
+	log.Printf("TomoFlix server starting on :%s (serving media from %s)", port, mediaDir)
 
 	// http.ListenAndServe blocks here, handling requests until the process
 	// is killed. log.Fatal will print the error and exit if the server

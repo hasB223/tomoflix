@@ -19,8 +19,8 @@ FROM gcr.io/distroless/static-debian12
 WORKDIR /app
 COPY --from=builder /tomoflix-server ./tomoflix-server
 
-# Matches the TOMOFLIX_VIDEO_DIR default in main.go - videos are expected
-# to be mounted here as a volume.
+# Matches the TOMOFLIX_MEDIA_DIR default in main.go - media files are
+# expected to be mounted here as a volume.
 VOLUME ["/app/videos"]
 
 EXPOSE 8080

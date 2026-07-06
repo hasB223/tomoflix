@@ -6,8 +6,9 @@ services:
       - "8080:8080"
     environment:
       - TOMOFLIX_PORT=8080
-      - TOMOFLIX_VIDEO_DIR=/app/videos
+      - TOMOFLIX_MEDIA_DIR=/app/videos
     volumes:
-      # Point this at wherever your .mp4 files actually live on the host.
+      # Point this at wherever your media files (video or audio) actually
+      # live on the host.
       - ./videos:/app/videos
     restart: unless-stopped

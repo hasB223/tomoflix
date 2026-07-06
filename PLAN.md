@@ -11,7 +11,7 @@ whenever a phase is completed or the plan changes.
 
 ## Phase 1 — Local video streaming ✅ DONE
 - [x] Go module + `main.go` entrypoint
-- [x] `stream/local.go` — range-request-aware local file serving
+- [x] `stream/local_media.go` — range-request-aware local media serving
 - [x] Dockerfile + docker-compose.yml for containerized deployment
 - Completed: 2026-07-05 (Claude chat scaffolded core; Codex added
   Docker setup)
@@ -21,9 +21,10 @@ whenever a phase is completed or the plan changes.
   tracked in Phase 2 below.
 
 ## Phase 2 — WebSocket sync hub (NEXT)
-- [ ] Rename `LocalVideoHandler` -> `LocalMediaHandler` and
-      `stream/local.go` naming to be media-neutral (supports audio as a
-      first-class type, not just video)
+- [x] Rename `LocalVideoHandler` -> `LocalMediaHandler` and
+      `stream/local_media.go` naming to be media-neutral (supports audio as a
+      first-class type, not just video) — done 2026-07-06 (also renamed
+      `TOMOFLIX_VIDEO_DIR` -> `TOMOFLIX_MEDIA_DIR` env var for consistency)
 - [ ] Define sync message schema (`sync/messages.go`): play, pause, seek,
       heartbeat/currentTime report, drift-correct
 - [ ] `sync/hub.go` — central broadcast hub (tracks connected clients per

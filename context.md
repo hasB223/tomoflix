@@ -86,7 +86,8 @@ server/
 ├── Dockerfile           # multi-stage build: golang:1.22-alpine -> distroless
 ├── .dockerignore
 ├── stream/
-│   ├── local.go          # http.ServeContent range serving for local mp4
+│   ├── local_media.go    # LocalMediaHandler: range serving for local video/audio
+│   ├── local_media_test.go
 │   └── drive_proxy.go    # proxies Google Drive API file -> client
 ├── sync/
 │   ├── hub.go             # broadcast hub: connected clients, room state
@@ -204,6 +205,20 @@ CREATE TABLE watch_history (
   readable control flow over dense/idiomatic-but-opaque patterns. Comment
   the *why* especially around concurrency (goroutines, channels, mutexes),
   since that's the least familiar part of Go coming from JS/TS.
+- **Test-oriented development.** Each function/handler is developed alongside
+  its own test spec, not as a follow-up pass — write (or at least stub) the
+  `_test.go` case(s) in the same commit/session as the implementation.
+  Standard library `testing` package, table-driven tests where there's more
+  than one case (Go idiom, keeps cases scannable). Handlers like
+  `LocalMediaHandler` get tested via `net/http/httptest` (happy-path range
+  request + at least one error case, e.g. missing file / path traversal
+  attempt) rather than deferred to manual curl checks.
+- **`rest.http` kept current.** Every time an HTTP endpoint is added, removed,
+  or its behavior changes, add/update the matching request(s) in a root-level
+  `rest.http` — a happy-path request plus at least one error case per
+  endpoint. Do this in the same pass as the implementation. (Existing
+  `/health` and `/stream/local/:file` routes predate this convention and
+  still need to be backfilled.)
 
 ## Deployment (2026-07-05)
 - **Server is containerized.** `server/Dockerfile` is a multi-stage build:
@@ -214,7 +229,7 @@ CREATE TABLE watch_history (
   goal.
 - **`docker-compose.yml`** at the repo root builds the `server/` image,
   publishes port 8080, and bind-mounts a host `./videos` directory into
-  `/app/videos` (matching `TOMOFLIX_VIDEO_DIR`'s default). Run with
+  `/app/videos` (matching `TOMOFLIX_MEDIA_DIR`'s default). Run with
   `docker compose up --build`.
 - Frontend (`client/`) has no Docker setup yet since it's still just a
   placeholder — will get its own build stage (or an nginx-serves-static-
@@ -242,13 +257,24 @@ CREATE TABLE watch_history (
   album-style multi-item rooms. Sync hub (WebSocket play/pause/seek
   logic) is unaffected either way — it only deals in abstract playback
   control messages, not video vs audio specifically. Code naming
-  (`LocalVideoHandler`, `stream/local.go`) will be renamed to
-  media-neutral terms (`LocalMediaHandler`) during Phase 2/3 work, before
-  Phase 4 (SQLite) locks in the schema.
+  (`LocalVideoHandler`, `stream/local.go`) was renamed to media-neutral
+  terms (`LocalMediaHandler`, `stream/local_media.go`) during Phase 2,
+  before Phase 4 (SQLite) locks in the schema.
 - **2026-07-05**: Server containerized via a multi-stage Dockerfile
   (distroless runtime image) plus a root-level `docker-compose.yml`, ahead
   of building further backend features, so the deploy story is settled
   early.
+- **2026-07-06**: Adopted test-oriented development (each function built
+  alongside its test spec, not after) and a `rest.http`-tracking convention
+  (every endpoint change gets a matching happy-path + error-case request in
+  a root-level `rest.http`), applied going forward from this point.
+- **2026-07-06**: Completed the media-neutral rename planned in Phase 2:
+  `LocalVideoHandler` -> `LocalMediaHandler`, `stream/local.go` ->
+  `stream/local_media.go`, `VideoDir` field -> `MediaDir`, and the
+  `TOMOFLIX_VIDEO_DIR` env var -> `TOMOFLIX_MEDIA_DIR` (docker-compose.yml
+  and main.go updated to match). Route path (`/stream/local/:file`) and the
+  host-side `./videos` directory name are unchanged — only code/config
+  naming was in scope here, not the on-disk folder convention.
 
 ## Open questions / next steps
 - [x] Build `/stream/local/:file` route with Range header support.
@@ -262,3 +288,7 @@ CREATE TABLE watch_history (
 - [ ] Decide hosting: run on a home machine (Tailscale/ngrok?) vs small VPS
       (containerization done — this is now just about *where* the
       container runs).
+- [x] Backfill: create root-level `rest.http` covering the existing
+      `/health` and `/stream/local/:file` routes, and add
+      `local_media_test.go` coverage for `LocalMediaHandler` — both predate
+      the test-oriented/`rest.http` convention adopted 2026-07-06.
