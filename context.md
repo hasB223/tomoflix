@@ -148,12 +148,22 @@ CREATE TABLE users (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE videos (
+-- Renamed from "videos" to "media_items" (2026-07-06) to support audio
+-- (downloaded songs/recordings) as a first-class type alongside video,
+-- not just an afterthought bolted onto a video-shaped table.
+CREATE TABLE media_items (
     id INTEGER PRIMARY KEY,
     title TEXT NOT NULL,
+    media_type TEXT NOT NULL CHECK (media_type IN ('video', 'audio')),
     source_type TEXT NOT NULL CHECK (source_type IN ('local', 'drive')),
     source_ref TEXT NOT NULL, -- local file path OR google drive file ID
     duration_seconds INTEGER,
+    -- Audio-specific fields, nullable since they don't apply to video.
+    -- Kept as plain columns rather than a JSON blob since these are the
+    -- only two known type-specific fields right now; revisit if more
+    -- type-specific metadata shows up later.
+    artist TEXT,
+    album TEXT,
     added_by INTEGER REFERENCES users(id),
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
@@ -161,17 +171,29 @@ CREATE TABLE videos (
 CREATE TABLE rooms (
     id INTEGER PRIMARY KEY,
     name TEXT,
-    current_video_id INTEGER REFERENCES videos(id),
+    current_media_id INTEGER REFERENCES media_items(id),
     host_user_id INTEGER REFERENCES users(id),
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     -- live playback position/connected clients intentionally NOT here;
     -- lives in in-memory hub state, not the DB
 );
 
+-- Optional lightweight queue, for "listen to an album together" or
+-- "watch a playlist" use cases. Not required for v1 (single item per
+-- room is fine to start), but the shape is here so it's not a surprise
+-- schema change later.
+CREATE TABLE room_queue (
+    id INTEGER PRIMARY KEY,
+    room_id INTEGER REFERENCES rooms(id),
+    media_id INTEGER REFERENCES media_items(id),
+    position INTEGER NOT NULL, -- order within the queue
+    added_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE watch_history (
     id INTEGER PRIMARY KEY,
     room_id INTEGER REFERENCES rooms(id),
-    video_id INTEGER REFERENCES videos(id),
+    media_id INTEGER REFERENCES media_items(id),
     watched_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 ```
@@ -211,6 +233,18 @@ CREATE TABLE watch_history (
   viewer throttling and to keep control over range-request handling.
 - **2026-07-05**: Explicitly decided NOT to integrate pirate/unlicensed
   streaming APIs as part of this collaborative build.
+- **2026-07-06**: Decided to support audio (downloaded songs/recordings)
+  as a first-class media type alongside video. Backend streaming layer
+  (`http.ServeFile`-based range serving) already works for any file type
+  without changes. Renamed the planned `videos` table to `media_items`
+  with a `media_type` column, plus nullable `artist`/`album` columns for
+  audio metadata. Added an optional `room_queue` table for playlist/
+  album-style multi-item rooms. Sync hub (WebSocket play/pause/seek
+  logic) is unaffected either way — it only deals in abstract playback
+  control messages, not video vs audio specifically. Code naming
+  (`LocalVideoHandler`, `stream/local.go`) will be renamed to
+  media-neutral terms (`LocalMediaHandler`) during Phase 2/3 work, before
+  Phase 4 (SQLite) locks in the schema.
 - **2026-07-05**: Server containerized via a multi-stage Dockerfile
   (distroless runtime image) plus a root-level `docker-compose.yml`, ahead
   of building further backend features, so the deploy story is settled
